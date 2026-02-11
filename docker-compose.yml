@@ -1,0 +1,37 @@
+services:
+  bot:
+    build: .
+    container_name: transcribe-bot
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - bot-tmp:/tmp/transcribe
+      # Mount the SA key file (adjust path as needed)
+      # - ./sa-key.json:/app/sa-key.json:ro
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://transcribe:transcribe@db:5432/transcribe_bot
+
+  db:
+    image: postgres:16-alpine
+    container_name: transcribe-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: transcribe
+      POSTGRES_PASSWORD: transcribe
+      POSTGRES_DB: transcribe_bot
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcribe -d transcribe_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  bot-tmp:
