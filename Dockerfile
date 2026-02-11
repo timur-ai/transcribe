@@ -25,8 +25,8 @@ RUN uv sync --frozen --no-dev --no-editable
 COPY src/ ./src/
 COPY alembic.ini ./
 
-# Create tmp directory
-RUN mkdir -p /tmp/transcribe && chown -R botuser:botuser /tmp/transcribe
+# Create tmp directory and set ownership for non-root user
+RUN mkdir -p /tmp/transcribe && chown -R botuser:botuser /tmp/transcribe /app
 
 # Switch to non-root user
 USER botuser
