@@ -9,25 +9,23 @@ services:
         condition: service_healthy
     volumes:
       - bot-tmp:/tmp/transcribe
-      # Mount the SA key file (adjust path as needed)
-      # - ./sa-key.json:/app/sa-key.json:ro
+      - ./sa-key.json:/app/sa-key.json:ro
     environment:
-      - DATABASE_URL=postgresql+asyncpg://transcribe:transcribe@db:5432/transcribe_bot
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-transcribe}:${POSTGRES_PASSWORD:-transcribe}@db:5432/${POSTGRES_DB:-transcribe_bot}
+      - YC_SERVICE_ACCOUNT_KEY_FILE=/app/sa-key.json
 
   db:
     image: postgres:16-alpine
     container_name: transcribe-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: transcribe
-      POSTGRES_PASSWORD: transcribe
-      POSTGRES_DB: transcribe_bot
+      POSTGRES_USER: ${POSTGRES_USER:-transcribe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transcribe}
+      POSTGRES_DB: ${POSTGRES_DB:-transcribe_bot}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U transcribe -d transcribe_bot"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transcribe} -d ${POSTGRES_DB:-transcribe_bot}"]
       interval: 5s
       timeout: 5s
       retries: 5
