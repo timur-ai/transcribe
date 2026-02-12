@@ -32,7 +32,7 @@ def _make_update(chat_id=12345, text=None):
     return update
 
 
-def _make_context(is_authorized=False, password="changeme", max_users=20):
+def _make_context(is_authorized=False, password="test_password", max_users=20):
     """Create a mock context with all required bot_data."""
     ctx = MagicMock()
 
@@ -57,6 +57,7 @@ def _make_context(is_authorized=False, password="changeme", max_users=20):
 
 
 class TestStartHandler:
+    @pytest.mark.asyncio
     async def test_no_effective_chat(self):
         """Should return END if no effective_chat."""
         update = MagicMock()
@@ -66,6 +67,7 @@ class TestStartHandler:
         result = await start_handler(update, ctx)
         assert result == ConversationHandler.END
 
+    @pytest.mark.asyncio
     async def test_already_authorized(self):
         """Authorized user should get 'already authorized' message."""
         update = _make_update()
@@ -79,6 +81,7 @@ class TestStartHandler:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "уже авторизованы" in msg
 
+    @pytest.mark.asyncio
     async def test_not_authorized_asks_password(self):
         """Unauthorized user should be asked for password."""
         update = _make_update()
@@ -94,6 +97,7 @@ class TestStartHandler:
 
 
 class TestPasswordHandler:
+    @pytest.mark.asyncio
     async def test_no_message(self):
         """Should return END if no message."""
         update = MagicMock()
@@ -104,6 +108,7 @@ class TestPasswordHandler:
         result = await password_handler(update, ctx)
         assert result == ConversationHandler.END
 
+    @pytest.mark.asyncio
     async def test_wrong_password(self):
         """Wrong password should ask again."""
         update = _make_update(text="wrong_password")
@@ -116,10 +121,11 @@ class TestPasswordHandler:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "Неверный пароль" in msg
 
+    @pytest.mark.asyncio
     async def test_correct_password_authorized(self):
         """Correct password should authorize user."""
-        update = _make_update(text="changeme")
-        ctx, session = _make_context(password="changeme")
+        update = _make_update(text="test_password")
+        ctx, session = _make_context(password="test_password")
 
         with patch("src.bot.handlers.repo.authorize_user", new_callable=AsyncMock, return_value=(True, "authorized")):
             result = await password_handler(update, ctx)
@@ -129,10 +135,11 @@ class TestPasswordHandler:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "авторизованы" in msg.lower() or "Добро пожаловать" in msg
 
+    @pytest.mark.asyncio
     async def test_user_limit_reached(self):
         """Should reject when user limit is reached."""
-        update = _make_update(text="changeme")
-        ctx, session = _make_context(password="changeme", max_users=2)
+        update = _make_update(text="test_password")
+        ctx, session = _make_context(password="test_password", max_users=2)
 
         with patch("src.bot.handlers.repo.authorize_user", new_callable=AsyncMock, return_value=(False, "user_limit_reached")):
             result = await password_handler(update, ctx)
@@ -142,10 +149,11 @@ class TestPasswordHandler:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "лимит" in msg.lower()
 
+    @pytest.mark.asyncio
     async def test_password_with_whitespace(self):
         """Password with extra whitespace should be stripped."""
-        update = _make_update(text="  changeme  ")
-        ctx, session = _make_context(password="changeme")
+        update = _make_update(text="  test_password  ")
+        ctx, session = _make_context(password="test_password")
 
         with patch("src.bot.handlers.repo.authorize_user", new_callable=AsyncMock, return_value=(True, "authorized")):
             result = await password_handler(update, ctx)

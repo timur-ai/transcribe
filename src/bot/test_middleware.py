@@ -40,6 +40,7 @@ def _make_session_factory(is_authorized: bool):
 
 
 class TestRequireAuth:
+    @pytest.mark.asyncio
     async def test_authorized_user_passes_through(self, update, context):
         """Authorized user should have the handler called."""
         handler = AsyncMock(return_value="handler_result")
@@ -59,6 +60,7 @@ class TestRequireAuth:
         handler.assert_called_once_with(update, context)
         assert result == "handler_result"
 
+    @pytest.mark.asyncio
     async def test_unauthorized_user_blocked(self, update, context):
         """Unauthorized user should get a rejection message."""
         handler = AsyncMock()
@@ -80,6 +82,7 @@ class TestRequireAuth:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "авторизуйтесь" in msg
 
+    @pytest.mark.asyncio
     async def test_no_effective_chat_returns_early(self, context):
         """If update has no effective_chat, handler should not be called."""
         handler = AsyncMock()
@@ -92,6 +95,7 @@ class TestRequireAuth:
         handler.assert_not_called()
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_no_session_factory_sends_error(self, update, context):
         """If db_session_factory is missing from bot_data, send error."""
         handler = AsyncMock()
@@ -105,6 +109,7 @@ class TestRequireAuth:
         msg = update.effective_chat.send_message.call_args[0][0]
         assert "ошибка" in msg.lower() or "⚠️" in msg
 
+    @pytest.mark.asyncio
     async def test_preserves_function_name(self):
         """Decorated function should preserve its original name."""
         async def my_handler(update, context):

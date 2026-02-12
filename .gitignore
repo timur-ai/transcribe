@@ -12,6 +12,8 @@ wheels/
 
 # Environment / secrets
 .env
+sa-key.json
+*.pem
 
 # IDE / editor
 .cursor/

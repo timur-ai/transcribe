@@ -110,10 +110,12 @@ class TestProcessingTask:
 
 
 class TestTaskQueueEnqueue:
+    @pytest.mark.asyncio
     async def test_enqueue_returns_position(self, task_queue, sample_task):
         position = await task_queue.enqueue(sample_task)
         assert position >= 1
 
+    @pytest.mark.asyncio
     async def test_enqueue_multiple(self, task_queue):
         t1 = ProcessingTask(chat_id=1, file_path="a", file_name="a", message_id=1)
         t2 = ProcessingTask(chat_id=2, file_path="b", file_name="b", message_id=2)
@@ -121,6 +123,7 @@ class TestTaskQueueEnqueue:
         pos2 = await task_queue.enqueue(t2)
         assert pos2 == 2
 
+    @pytest.mark.asyncio
     async def test_get_queue_size(self, task_queue, sample_task):
         assert task_queue.get_queue_size() == 0
         await task_queue.enqueue(sample_task)
@@ -128,16 +131,19 @@ class TestTaskQueueEnqueue:
 
 
 class TestTaskQueueWorkers:
+    @pytest.mark.asyncio
     async def test_start_creates_workers(self, task_queue):
         await task_queue.start()
         assert len(task_queue._workers) == 2
         await task_queue.stop()
 
+    @pytest.mark.asyncio
     async def test_stop_cancels_workers(self, task_queue):
         await task_queue.start()
         await task_queue.stop()
         assert len(task_queue._workers) == 0
 
+    @pytest.mark.asyncio
     async def test_worker_processes_task(self, task_queue, sample_task, mock_services):
         """Worker should pick up and process enqueued tasks."""
         # Mock os.path.exists and os.remove to avoid filesystem access
@@ -172,12 +178,14 @@ class TestTaskQueueWorkers:
 
 
 class TestTaskQueueSendMessage:
+    @pytest.mark.asyncio
     async def test_send_message(self, task_queue):
         await task_queue._send_message(12345, "Test message")
         task_queue._bot.send_message.assert_called_once_with(
             chat_id=12345, text="Test message"
         )
 
+    @pytest.mark.asyncio
     async def test_send_message_error_handled(self, task_queue):
         """Send message should not raise even if bot raises."""
         task_queue._bot.send_message.side_effect = Exception("Network error")
@@ -195,6 +203,7 @@ class TestCostConstant:
 
 
 class TestTimeoutMonitor:
+    @pytest.mark.asyncio
     async def test_timeout_monitor_sends_notification(self, task_queue):
         """Timeout monitor should send a message after expected time."""
         import time
