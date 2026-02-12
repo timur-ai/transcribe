@@ -1,5 +1,6 @@
 """Telegram bot command and message handlers."""
 
+import html
 import logging
 import os
 import tempfile
@@ -21,6 +22,11 @@ from src.db import repository as repo
 from src.services.audio import AudioProcessor
 
 logger = logging.getLogger(__name__)
+
+
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters for Telegram HTML parse mode."""
+    return html.escape(text)
 
 # Conversation states
 AWAITING_PASSWORD = 0
@@ -101,26 +107,26 @@ async def password_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help command — show usage instructions."""
     await update.effective_chat.send_message(
-        "📖 *Transcribe Bot — Справка*\n\n"
-        "*Как использовать:*\n"
-        "1\\. Отправьте аудио или видеофайл боту\n"
-        "2\\. Дождитесь транскрибации и анализа\n"
-        "3\\. Получите результат с возможностью скачать PDF\n\n"
-        "*Поддерживаемые форматы:*\n"
+        "📖 <b>Transcribe Bot — Справка</b>\n\n"
+        "<b>Как использовать:</b>\n"
+        "1. Отправьте аудио или видеофайл боту\n"
+        "2. Дождитесь транскрибации и анализа\n"
+        "3. Получите результат с возможностью скачать PDF\n\n"
+        "<b>Поддерживаемые форматы:</b>\n"
         "🎵 Аудио: OGG, MP3, WAV, FLAC, M4A\n"
         "🎬 Видео: MP4, AVI, MOV, MKV, WEBM\n\n"
-        "💡 _Для файлов > 20 МБ отправляйте как документ_\n\n"
-        "*Команды:*\n"
+        "💡 <i>Для файлов &gt; 20 МБ отправляйте как документ</i>\n\n"
+        "<b>Команды:</b>\n"
         "/start — авторизация\n"
         "/help — эта справка\n"
         "/history — история транскрибаций\n"
         "/cost — стоимость последней транскрибации\n"
         "/logout — выход из системы\n\n"
-        "*Ограничения:*\n"
-        "• Макс\\. длительность: 4 часа\n"
-        "• Макс\\. размер файла: 2 ГБ \\(лимит Telegram\\)\n"
+        "<b>Ограничения:</b>\n"
+        "• Макс. длительность: 4 часа\n"
+        "• Макс. размер файла: 2 ГБ (лимит Telegram)\n"
         "• Язык: только русский",
-        parse_mode="MarkdownV2",
+        parse_mode="HTML",
     )
 
 
@@ -142,9 +148,9 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     keyboard = get_history_keyboard(transcriptions, page=0)
     await update.effective_chat.send_message(
-        f"📋 *История транскрибаций* \\({len(transcriptions)} шт\\.\\)",
+        f"📋 <b>История транскрибаций</b> ({len(transcriptions)} шт.)",
         reply_markup=keyboard,
-        parse_mode="MarkdownV2",
+        parse_mode="HTML",
     )
 
 
@@ -168,17 +174,17 @@ async def history_callback_handler(
             await query.edit_message_text("❌ Транскрибация не найдена.")
             return
 
-        text = f"📝 *{t.file_name}*\n\n"
+        name = _escape_html(t.file_name)
+        text = f"📝 <b>{name}</b>\n\n"
         if t.transcription_text:
-            # Truncate to Telegram's message limit
-            trans_text = t.transcription_text[:3500]
-            text += f"*Транскрибация:*\n{trans_text}\n\n"
+            trans_text = _escape_html(t.transcription_text[:3500])
+            text += f"<b>Транскрибация:</b>\n{trans_text}\n\n"
         if t.analysis_text:
-            analysis = t.analysis_text[:3500]
-            text += f"*Анализ:*\n{analysis}"
+            analysis = _escape_html(t.analysis_text[:3500])
+            text += f"<b>Анализ:</b>\n{analysis}"
 
         keyboard = get_pdf_keyboard(t.id)
-        await query.message.reply_text(text, reply_markup=keyboard)
+        await query.message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
 
     elif data.startswith("hpage:"):
         page = int(data.split(":")[1])
@@ -233,14 +239,15 @@ async def cost_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     gpt_cost_estimate = 2.0  # rough estimate
     total = speechkit_cost + gpt_cost_estimate
 
+    name = _escape_html(t.file_name)
     await update.effective_chat.send_message(
-        f"💰 *Стоимость последней транскрибации*\n\n"
-        f"Файл: {t.file_name}\n"
+        f"💰 <b>Стоимость последней транскрибации</b>\n\n"
+        f"Файл: {name}\n"
         f"Длительность: {duration / 60:.1f} мин\n\n"
         f"SpeechKit: ~{speechkit_cost:.2f} ₽\n"
         f"YandexGPT: ~{gpt_cost_estimate:.2f} ₽\n"
-        f"*Итого: ~{total:.2f} ₽*",
-        parse_mode="Markdown",
+        f"<b>Итого: ~{total:.2f} ₽</b>",
+        parse_mode="HTML",
     )
 
 
@@ -399,7 +406,13 @@ def get_conversation_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, password_handler),
             ],
         },
-        fallbacks=[CommandHandler("start", start_handler)],
+        fallbacks=[
+            CommandHandler("start", start_handler),
+            CommandHandler("help", help_handler),
+            CommandHandler("history", history_handler),
+            CommandHandler("logout", logout_handler),
+            CommandHandler("cost", cost_handler),
+        ],
     )
 
 
